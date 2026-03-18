@@ -1,0 +1,1072 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multilingual Indian Sign Language Converter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      /* NO global scroll ever */
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #f8f5f2;
+    }
+
+    /* ── Screens: each fills exact viewport ── */
+    .screen {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .screen.hidden {
+      display: none;
+    }
+
+    /* ── Gradients / shadows ── */
+    .orange-grad {
+      background: linear-gradient(135deg, #FF8C42, #FF6B35);
+    }
+
+    .orange-grad-h {
+      background: linear-gradient(90deg, #FF8C42, #FF6B35);
+    }
+
+    .card-shadow {
+      box-shadow: 0 8px 32px rgba(255, 107, 53, .14);
+    }
+
+    .soft-shadow {
+      box-shadow: 0 2px 12px rgba(0, 0, 0, .07);
+    }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      background: linear-gradient(90deg, #FF8C42, #FF6B35);
+      color: #fff;
+      font-weight: 700;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: filter .2s, transform .2s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.07);
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: #fff;
+      font-weight: 700;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      border: none;
+      transition: filter .2s, transform .2s;
+    }
+
+    .btn-danger:hover {
+      filter: brightness(1.1);
+    }
+
+    /* ── Mode cards ── */
+    .mode-card {
+      background: #fff;
+      border-radius: 20px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 28px 20px;
+    }
+
+    .mode-card:hover {
+      border-color: #FF6B35;
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px rgba(255, 107, 53, .18);
+    }
+
+    /* ── Compact language dropdown ── */
+    .lang-wrap {
+      position: relative;
+    }
+
+    .lang-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      background: #fff;
+      min-width: 190px;
+      border-radius: 12px;
+      z-index: 999;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+    }
+
+    .lang-menu.open {
+      display: block;
+    }
+
+    .lang-item {
+      padding: 9px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: .82rem;
+      transition: background .15s;
+    }
+
+    .lang-item:hover {
+      background: #fafafa;
+    }
+
+    .lang-item.active {
+      background: #fff5f2;
+      color: #FF6B35;
+    }
+
+    /* ── Camera ── */
+    #webcam {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 14px;
+    }
+
+    .cam-container {
+      flex: 1;
+      min-height: 0;
+      background: linear-gradient(180deg, #2c3e50, #34495e);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    /* ── Tab bar ── */
+    .tab-btn {
+      flex: 1;
+      padding: 12px 0;
+      font-weight: 600;
+      font-size: .85rem;
+      border-bottom: 2px solid transparent;
+      color: #6b7280;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+      cursor: pointer;
+      transition: color .2s, border-color .2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .tab-btn.active {
+      color: #FF6B35;
+      border-bottom-color: #FF6B35;
+    }
+
+    /* ── Output box ── */
+    .result-box {
+      background: linear-gradient(135deg, #fff8f5, #ffede5);
+      border: 2px solid #ffd4c4;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    /* ── Animations ── */
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .5
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+
+    .fade-in {
+      animation: fadeIn .35s ease-out;
+    }
+
+    ::-webkit-scrollbar {
+      width: 0px;
+    }
+
+    /* Hide Speak Output toggle — voice output is ISL→Text only */
+    #speak-toggle,
+    #speak-toggle-dot {
+      display: none !important;
+    }
+
+    /* Hide the entire toggle row */
+    #speak-toggle-dot~* {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ══════════════════════════════════════════
+     SCREEN 1: WELCOME
+══════════════════════════════════════════ -->
+  <div id="s-welcome" class="screen orange-grad items-center justify-center">
+    <div class="text-center fade-in px-6" style="max-width:420px;">
+
+      <div class="w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-5"
+        style="background:rgba(255,255,255,.2);">
+        <svg viewBox="0 0 200 200" fill="none" style="width:54px;height:54px;">
+          <path d="M70 130 C70 100, 85 80, 100 70 C115 80, 130 100, 130 130" stroke="white" stroke-width="5" fill="none"
+            stroke-linecap="round" />
+          <path d="M80 125 L80 95" stroke="white" stroke-width="4" stroke-linecap="round" />
+          <path d="M90 120 L90 85" stroke="white" stroke-width="4" stroke-linecap="round" />
+          <path d="M100 118 L100 80" stroke="white" stroke-width="4" stroke-linecap="round" />
+          <path d="M110 120 L110 85" stroke="white" stroke-width="4" stroke-linecap="round" />
+          <path d="M120 125 L120 95" stroke="white" stroke-width="4" stroke-linecap="round" />
+        </svg>
+      </div>
+
+      <h1 class="text-white font-extrabold mb-2" style="font-size:1.75rem;line-height:1.2;">
+        Multilingual Indian<br>Sign Language Converter
+      </h1>
+      <p class="mb-2" style="color:rgba(255,255,255,.85);font-size:.9rem;">
+        Bridging communication through real-time sign recognition
+      </p>
+      <p class="mb-8" style="color:rgba(255,255,255,.7);font-size:.8rem;">
+        <strong>English&nbsp;•&nbsp;Hindi&nbsp;•&nbsp;Tamil&nbsp;•&nbsp;Telugu&nbsp;•&nbsp;Malayalam</strong>
+      </p>
+
+      <button onclick="go('s-mode')" class="btn-primary"
+        style="background:#fff;color:#FF6B35;border-radius:999px;padding:14px 44px;font-size:1.05rem;">
+        Get Started
+        <svg style="width:18px;height:18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5-5 5m5-5H6" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+     SCREEN 2: CHOOSE MODE
+══════════════════════════════════════════ -->
+  <div id="s-mode" class="screen hidden" style="background:#f8f5f2;">
+
+    <!-- Header -->
+    <div class="soft-shadow"
+      style="background:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="orange-grad"
+          style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+          <svg style="width:18px;height:18px;" fill="none" stroke="white" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+          </svg>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:.95rem;color:#1f2937;">ISL Translator</div>
+          <div style="font-size:.72rem;color:#9ca3af;">Indian Sign Language</div>
+        </div>
+      </div>
+      <button onclick="go('s-welcome')"
+        style="font-size:.82rem;color:#9ca3af;background:none;border:none;cursor:pointer;font-weight:600;">←
+        Back</button>
+    </div>
+
+    <!-- Cards centered in remaining space -->
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div style="width:100%;max-width:600px;">
+        <h2 style="font-size:1.4rem;font-weight:800;color:#1f2937;text-align:center;margin-bottom:6px;">Choose a Mode
+        </h2>
+        <p style="font-size:.82rem;color:#9ca3af;text-align:center;margin-bottom:22px;">Select how you'd like to use the
+          ISL Converter</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+
+          <!-- Text to ISL -->
+          <div class="mode-card card-shadow" onclick="openMode('translate')">
+            <div class="orange-grad"
+              style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+              <svg style="width:26px;height:26px;" fill="none" stroke="white" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            <div style="font-size:1rem;font-weight:700;color:#1f2937;margin-bottom:6px;">Text to ISL</div>
+            <div style="font-size:.78rem;color:#6b7280;margin-bottom:14px;line-height:1.4;">Type digits and see the
+              corresponding ISL gestures</div>
+            <span class="btn-primary" style="padding:8px 20px;font-size:.8rem;border-radius:10px;">Open →</span>
+          </div>
+
+          <!-- ISL to Text -->
+          <div class="mode-card card-shadow" onclick="openMode('camera')">
+            <div class="orange-grad"
+              style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+              <svg style="width:26px;height:26px;" fill="none" stroke="white" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div style="font-size:1rem;font-weight:700;color:#1f2937;margin-bottom:6px;">ISL to Text</div>
+            <div style="font-size:.78rem;color:#6b7280;margin-bottom:14px;line-height:1.4;">Show signs to your camera —
+              get real-time text</div>
+            <span class="btn-primary" style="padding:8px 20px;font-size:.8rem;border-radius:10px;">Open →</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+     SCREEN 3: MAIN APP (Tabs)
+══════════════════════════════════════════ -->
+  <div id="s-main" class="screen hidden" style="background:#f3f4f6;">
+
+    <!-- Header (fixed height) -->
+    <div class="soft-shadow"
+      style="background:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="orange-grad"
+          style="width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;">
+          <svg style="width:17px;height:17px;" fill="none" stroke="white" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+          </svg>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:.92rem;color:#1f2937;">ISL Translator</div>
+          <div style="font-size:.7rem;color:#9ca3af;">Indian Sign Language</div>
+        </div>
+      </div>
+      <button onclick="go('s-mode')" style="background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;"
+        title="Back">
+        <svg style="width:22px;height:22px;color:#6b7280;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Tab bar (fixed height) -->
+    <div style="background:#fff;border-bottom:1px solid #e5e7eb;display:flex;flex-shrink:0;">
+      <button id="tab-translate" class="tab-btn active" onclick="switchTab('translate')">
+        <svg style="width:16px;height:16px;" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 6h2.764L13 11.236 11.618 14z" />
+        </svg>
+        Text to ISL
+      </button>
+      <button id="tab-camera" class="tab-btn" onclick="switchTab('camera')">
+        <svg style="width:16px;height:16px;" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd"
+            d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z"
+            clip-rule="evenodd" />
+        </svg>
+        ISL to Text
+      </button>
+    </div>
+
+    <!-- Content (fills remaining height, NO overflow) -->
+    <div style="flex:1;min-height:0;overflow:hidden;">
+
+      <!-- ── TEXT TO ISL VIEW ── -->
+      <div id="view-translate"
+        style="height:100%;display:flex;flex-direction:column;padding:12px 14px;gap:10px;overflow:hidden;">
+
+        <!-- Two columns side by side -->
+        <div style="flex:1;min-height:0;display:flex;gap:10px;">
+
+          <!-- Left: Input -->
+          <div class="card-shadow"
+            style="flex:1;background:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;">
+
+            <div style="font-weight:700;font-size:.9rem;color:#1f2937;display:flex;align-items:center;gap:6px;">
+              <svg style="width:15px;height:15px;color:#FF6B35;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Text to ISL Signs
+            </div>
+
+            <!-- Textarea fills remaining space -->
+            <textarea id="text-input" placeholder="Enter a word or sentence… e.g. hello good" maxlength="100"
+              style="flex:1;min-height:0;width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:10px;font-size:.88rem;resize:none;outline:none;font-family:inherit;transition:border-color .2s;"
+              onfocus="this.style.borderColor='#FF8C42'" onblur="this.style.borderColor='#e5e7eb'"
+              oninput="document.getElementById('char-count').textContent=this.value.length"></textarea>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.7rem;color:#9ca3af;">
+              <span>Enter any word or phrase</span>
+              <span><span id="char-count">0</span>/100</span>
+            </div>
+
+            <!-- Voice input button -->
+            <button id="mic-btn" onclick="toggleVoiceInput()" class="btn-primary"
+              style="width:100%;padding:10px;background:linear-gradient(90deg,#6366f1,#8b5cf6);gap:8px;">
+              <svg id="mic-icon" style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m-4 0h8M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z" />
+              </svg>
+              <span id="mic-label">Speak a Word</span>
+            </button>
+
+            <!-- Speak ON/OFF toggle -->
+            <div
+              style="display:flex;align-items:center;justify-content:space-between;background:#f9fafb;border:2px solid #e5e7eb;border-radius:10px;padding:8px 12px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <svg style="width:15px;height:15px;color:#6366f1;" fill="none" stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+                <span style="font-size:.8rem;font-weight:600;color:#374151;">Speak Output</span>
+              </div>
+              <button id="speak-toggle" onclick="toggleSpeakMode()" title="Toggle speak"
+                style="width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;position:relative;transition:background .25s;background:#d1d5db;">
+                <div id="speak-toggle-dot"
+                  style="width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:3px;left:3px;transition:left .25s;box-shadow:0 1px 3px rgba(0,0,0,.15);">
+                </div>
+              </button>
+            </div>
+
+            <button onclick="translateText()" class="btn-primary" style="width:100%;padding:10px;">
+              <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Translate to ISL
+            </button>
+
+            <div id="tl-loading" style="display:none;text-align:center;font-size:.8rem;color:#FF6B35;font-weight:600;">
+              Translating…
+            </div>
+          </div>
+
+          <!-- Right: Output -->
+          <div class="card-shadow"
+            style="flex:1;background:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;">
+            <div style="font-weight:700;font-size:.9rem;color:#1f2937;display:flex;align-items:center;gap:6px;">
+              <svg style="width:15px;height:15px;color:#FF6B35;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              ISL Signs Output
+            </div>
+            <div id="output-section"
+              style="flex:1;min-height:0;background:#f9fafb;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:auto;">
+              <div style="text-align:center;color:#d1d5db;">
+                <svg style="width:48px;height:48px;margin:0 auto 8px;" fill="none" stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+                <p style="font-size:.82rem;font-weight:500;">Signs appear here</p>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /columns -->
+      </div><!-- /translate view -->
+
+      <!-- ── ISL TO TEXT VIEW ── -->
+      <div id="view-camera"
+        style="height:100%;display:none;flex-direction:column;padding:12px 14px;gap:10px;overflow:hidden;">
+
+        <div style="flex:1;min-height:0;display:flex;gap:10px;">
+
+          <!-- Left: Camera (fills height) -->
+          <div class="card-shadow"
+            style="flex:1.4;background:#fff;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0;">
+
+            <div
+              style="font-weight:700;font-size:.9rem;color:#1f2937;display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <svg style="width:15px;height:15px;color:#FF6B35;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              ISL Sign Recognition
+            </div>
+
+            <!-- Compact language dropdown -->
+            <div style="flex-shrink:0;">
+              <div class="lang-wrap">
+                <button onclick="toggleDrop('drop-camera')"
+                  style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#fff7f4;border:2px solid #ffd4c4;border-radius:10px;font-size:.8rem;font-weight:600;color:#374151;cursor:pointer;">
+                  <svg style="width:13px;height:13px;color:#FF6B35;" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                  </svg>
+                  <span id="cam-lang-label">English</span>
+                  <svg style="width:11px;height:11px;color:#9ca3af;" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div id="drop-camera" class="lang-menu">
+                  <div class="lang-item active" onclick="pickLang('camera','english','English',this)">
+                    <div class="orange-grad"
+                      style="width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.65rem;font-weight:700;flex-shrink:0;">
+                      EN</div>English
+                  </div>
+                  <div class="lang-item" onclick="pickLang('camera','hindi','Hindi',this)">
+                    <div
+                      style="width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#34d399,#14b8a6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.65rem;font-weight:700;flex-shrink:0;">
+                      हि</div>Hindi
+                  </div>
+                  <div class="lang-item" onclick="pickLang('camera','tamil','Tamil',this)">
+                    <div
+                      style="width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#fb923c,#ef4444);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.65rem;font-weight:700;flex-shrink:0;">
+                      த</div>Tamil
+                  </div>
+                  <div class="lang-item" onclick="pickLang('camera','telugu','Telugu',this)">
+                    <div
+                      style="width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#60a5fa,#6366f1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.65rem;font-weight:700;flex-shrink:0;">
+                      తె</div>Telugu
+                  </div>
+                  <div class="lang-item" onclick="pickLang('camera','malayalam','Malayalam',this)">
+                    <div
+                      style="width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#c084fc,#f472b6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.65rem;font-weight:700;flex-shrink:0;">
+                      മ</div>Malayalam
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Camera preview — fills remaining height -->
+            <div class="cam-container">
+              <video id="webcam" autoplay playsinline></video>
+            </div>
+
+            <!-- Camera toggle -->
+            <button id="camera-toggle" onclick="toggleCamera()" class="btn-primary"
+              style="width:100%;padding:10px;flex-shrink:0;">
+              <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Start Camera
+            </button>
+          </div>
+
+          <!-- Right: Output -->
+          <div class="card-shadow"
+            style="flex:1;background:#fff;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0;">
+
+            <div
+              style="font-weight:700;font-size:.9rem;color:#1f2937;display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <svg style="width:15px;height:15px;color:#FF6B35;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Recognition Output
+            </div>
+
+            <!-- Status row -->
+            <div
+              style="background:#fff7f4;border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <div id="status-dot" class="pulse"
+                style="width:10px;height:10px;border-radius:50%;background:#fb923c;flex-shrink:0;"></div>
+              <span id="cam-status" style="font-size:.8rem;font-weight:600;color:#374151;">Ready to recognize</span>
+            </div>
+
+            <!-- Recognized sign (no confidence %) -->
+            <div class="result-box" style="flex-shrink:0;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                <div
+                  style="font-size:.68rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;">
+                  Recognized Sign</div>
+                <button id="speak-btn" onclick="speakRecognizedText()" title="Read aloud"
+                  style="background:linear-gradient(90deg,#6366f1,#8b5cf6);border:none;border-radius:8px;padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:filter .2s,transform .2s;"
+                  onmouseenter="this.style.filter='brightness(1.1)';this.style.transform='translateY(-1px)'"
+                  onmouseleave="this.style.filter='none';this.style.transform='none'">
+                  <svg style="width:13px;height:13px;color:#fff;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  </svg>
+                  <span style="font-size:.68rem;font-weight:700;color:#fff;">Speak</span>
+                </button>
+              </div>
+              <div id="recognized-digit"
+                style="font-size:2.8rem;font-weight:800;color:#FF6B35;text-align:center;line-height:1;">—</div>
+              <div id="recognized-text"
+                style="font-size:.85rem;font-weight:600;color:#374151;text-align:center;margin-top:4px;">Position hands
+                in frame</div>
+            </div>
+
+            <!-- Translation result (hidden until detected) -->
+            <div id="translation-result" class="result-box" style="display:none;flex-shrink:0;">
+              <div
+                style="font-size:.68rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">
+                Translation</div>
+              <div id="translated-word" style="font-size:1.6rem;font-weight:800;color:#FF6B35;"></div>
+              <div id="translation-lang-label" style="font-size:.7rem;color:#9ca3af;margin-top:2px;">English</div>
+            </div>
+
+            <!-- Spacer -->
+            <div style="flex:1;"></div>
+
+            <!-- History (last few signs) -->
+            <div style="flex-shrink:0;">
+              <div
+                style="font-size:.68rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">
+                Recent Signs</div>
+              <div id="sign-history" style="font-size:.8rem;color:#6b7280;min-height:22px;">—</div>
+            </div>
+
+          </div>
+        </div>
+      </div><!-- /camera view -->
+
+    </div><!-- /content -->
+  </div><!-- /s-main -->
+
+  <script>
+    /* Remove Speak Output toggle from Text→ISL (voice stays on ISL→Text only) */
+    document.addEventListener('DOMContentLoaded', () => {
+      const t = document.getElementById('speak-toggle');
+      if (t && t.parentElement) t.parentElement.remove();
+    });
+
+    const API = 'http://127.0.0.1:5000';
+
+    /* ── State ── */
+    let selectedLang = { translate: 'english', camera: 'english' };
+    let cameraStream = null;
+    let isRecognizing = false;
+    let recInterval = null;
+
+    /* Default output placeholder HTML */
+    const OUTPUT_PLACEHOLDER = `
+      <div style="text-align:center;color:#d1d5db;">
+        <svg style="width:48px;height:48px;margin:0 auto 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+        </svg>
+        <p style="font-size:.82rem;font-weight:500;">Signs appear here</p>
+      </div>`;
+    let signHistory = [];
+    const MAX_HISTORY = 8;
+
+    /* ── Screen navigation ── */
+    const SCREENS = ['s-welcome', 's-mode', 's-main'];
+    function go(id) {
+      SCREENS.forEach(s => document.getElementById(s).classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+      if (cameraStream && id !== 's-main') stopCamera();
+    }
+    function openMode(tab) { go('s-main'); switchTab(tab); }
+
+    /* ── Tab switching ── */
+    function switchTab(tab) {
+      ['translate', 'camera'].forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        const view = document.getElementById(`view-${t}`);
+        const isActive = t === tab;
+        btn.classList.toggle('active', isActive);
+        view.style.display = isActive ? 'flex' : 'none';
+      });
+      if (tab !== 'camera' && cameraStream) stopCamera();
+    }
+
+    /* ── Language dropdowns ── */
+    function toggleDrop(id) {
+      const m = document.getElementById(id);
+      const wasOpen = m.classList.contains('open');
+      document.querySelectorAll('.lang-menu').forEach(x => x.classList.remove('open'));
+      if (!wasOpen) m.classList.add('open');
+    }
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.lang-wrap'))
+        document.querySelectorAll('.lang-menu').forEach(x => x.classList.remove('open'));
+    });
+    function pickLang(panel, code, name, el) {
+      selectedLang[panel] = code;
+      const labelId = panel === 'translate' ? 'tl-lang-label' : 'cam-lang-label';
+      const labelEl = document.getElementById(labelId);
+      if (labelEl) labelEl.textContent = name;
+      if (panel === 'camera') {
+        const translEl = document.getElementById('translation-lang-label');
+        if (translEl) translEl.textContent = name;
+      }
+      el.closest('.lang-menu').querySelectorAll('.lang-item').forEach(i => i.classList.remove('active'));
+      el.classList.add('active');
+      toggleDrop(panel === 'translate' ? 'drop-translate' : 'drop-camera');
+    }
+
+    /* ── Text to ISL  (External Sign Image API) ── */
+    const SIGN_API = 'https://dhanvarthini-wordsml.hf.space';
+
+    async function fetchSignImage(word) {
+      /* Returns a blob URL for the sign image, or null on failure */
+      try {
+        const url = `${SIGN_API}/sign/${encodeURIComponent(word.toLowerCase())}`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        if (!blob.type.startsWith('image/')) return null;
+        return URL.createObjectURL(blob);
+      } catch {
+        return null;
+      }
+    }
+
+    async function translateText() {
+      const raw = document.getElementById('text-input').value.trim();
+      const out = document.getElementById('output-section');
+      const loader = document.getElementById('tl-loading');
+
+      if (!raw) {
+        out.innerHTML = `<div style="text-align:center;color:#f97316;font-size:.82rem;font-weight:600;">Please enter a word or phrase</div>`;
+        return;
+      }
+
+      /* Split input into individual tokens */
+      const tokens = raw.split(/\s+/).filter(Boolean);
+
+      /* Show loader — keep previous output visible until new result arrives */
+      loader.style.display = 'block';
+      out.style.display = 'flex';
+      out.style.flexWrap = 'wrap';
+      out.style.gap = '14px';
+      out.style.alignItems = 'center';
+      out.style.justifyContent = 'center';
+      out.style.padding = '12px';
+
+      /* Separate pure-digit tokens from word tokens */
+      const digitTokens = [];
+      const wordTokens = [];
+      tokens.forEach(t => {
+        if (/^\d+$/.test(t)) digitTokens.push(t);
+        else wordTokens.push(t);
+      });
+
+      /* --- Fetch digit signs from backend /api/text-to-isl --- */
+      let digitImages = []; // { imgSrc }
+      if (digitTokens.length) {
+        try {
+          const allDigits = digitTokens.join('');
+          const res = await fetch(`${API}/api/text-to-isl`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: allDigits, language: selectedLang.translate })
+          });
+          const data = await res.json();
+          if (data.success && data.results) {
+            data.results.forEach(r => {
+              if (r.found && r.image) {
+                digitImages.push({ imgSrc: r.image });
+              }
+            });
+          }
+        } catch { /* backend offline — skip digits */ }
+      }
+
+      /* --- Fetch word signs from external HuggingFace API --- */
+      let wordImages = [];
+      if (wordTokens.length) {
+        const results = await Promise.all(
+          wordTokens.map(async w => ({ word: w, imgUrl: await fetchSignImage(w) }))
+        );
+        wordImages = results.filter(r => r.imgUrl).map(r => ({ imgSrc: r.imgUrl }));
+      }
+
+      loader.style.display = 'none';
+
+      /* Combine all found images (digits first, then words) */
+      const allImages = [...digitImages, ...wordImages];
+
+      if (!allImages.length) {
+        /* None found — show friendly message */
+        out.innerHTML = `
+          <div style="text-align:center;padding:24px;">
+            <svg style="width:52px;height:52px;margin:0 auto 12px;color:#fbbf24;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div style="font-weight:700;font-size:1rem;color:#f97316;margin-bottom:6px;">Oops! No ISL signs found</div>
+            <div style="font-size:.82rem;color:#9ca3af;line-height:1.5;">We couldn't find signs for that input.<br>Try digits <strong style="color:#FF6B35;">0-9</strong> or words like <strong style="color:#FF6B35;">hello</strong>, <strong style="color:#FF6B35;">good</strong>, <strong style="color:#FF6B35;">yes</strong>, or <strong style="color:#FF6B35;">no</strong></div>
+          </div>`;
+        return;
+      }
+
+      /* Dynamic size: scale images down so all fit in one view */
+      const n = allImages.length;
+      /* Pick tile size: 1→220px, 2→200px, 3–4→160px, 5–6→130px, 7+→110px */
+      const tileSize = n === 1 ? 220 : n === 2 ? 200 : n <= 4 ? 160 : n <= 6 ? 130 : 110;
+
+      out.innerHTML = allImages.map(r => `
+        <div style="background:linear-gradient(135deg,#fff7f4,#ffede5);
+                    border:2px solid #ffd4c4;border-radius:14px;padding:6px;
+                    width:${tileSize}px;height:${tileSize}px;flex-shrink:0;
+                    display:flex;align-items:center;justify-content:center;
+                    transition:transform .2s,box-shadow .2s;"
+             onmouseenter="this.style.transform='scale(1.04)';this.style.boxShadow='0 6px 20px rgba(255,107,53,.2)'"
+             onmouseleave="this.style.transform='scale(1)';this.style.boxShadow='none'">
+          <img src="${r.imgSrc}" alt="ISL sign" loading="lazy"
+               style="width:100%;height:100%;object-fit:contain;border-radius:8px;"/>
+        </div>
+      `).join('');
+      /* Images stay visible until the user clicks Translate again — no auto-clear */
+    }
+
+    /* ── Camera ── */
+    async function toggleCamera() { cameraStream ? stopCamera() : await startCamera(); }
+
+    async function startCamera() {
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } }
+        });
+        document.getElementById('webcam').srcObject = cameraStream;
+        document.getElementById('cam-status').textContent = 'Recognizing…';
+        document.getElementById('status-dot').style.background = '#22c55e';
+        document.getElementById('camera-toggle').className = 'btn-danger';
+        document.getElementById('camera-toggle').style.width = '100%';
+        document.getElementById('camera-toggle').style.padding = '10px';
+        document.getElementById('camera-toggle').innerHTML = `
+        <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9 10h6v4H9z"/>
+        </svg> Stop Camera`;
+        isRecognizing = true;
+        recInterval = setInterval(recognizeSign, 500);
+      } catch {
+        document.getElementById('cam-status').textContent = 'Camera access denied';
+      }
+    }
+
+    function stopCamera() {
+      if (!cameraStream) return;
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null; isRecognizing = false;
+      clearInterval(recInterval); recInterval = null;
+      document.getElementById('webcam').srcObject = null;
+      document.getElementById('cam-status').textContent = 'Ready to recognize';
+      document.getElementById('status-dot').style.background = '#fb923c';
+      document.getElementById('recognized-digit').textContent = '—';
+      document.getElementById('recognized-text').textContent = 'Position hands in frame';
+      document.getElementById('translation-result').style.display = 'none';
+      const btn = document.getElementById('camera-toggle');
+      btn.className = 'btn-primary'; btn.style.width = '100%'; btn.style.padding = '10px';
+      btn.innerHTML = `
+      <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+      </svg> Start Camera`;
+    }
+
+    async function recognizeSign() {
+      if (!isRecognizing) return;
+      try {
+        const v = document.getElementById('webcam');
+        const c = document.createElement('canvas');
+        c.width = v.videoWidth; c.height = v.videoHeight;
+        c.getContext('2d').drawImage(v, 0, 0);
+        const imgData = c.toDataURL('image/jpeg', 0.8);
+
+        const r = await fetch(`${API}/api/predict`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imgData, language: selectedLang.camera })
+        });
+        const d = await r.json();
+
+        if (d.detected) {
+          document.getElementById('recognized-digit').textContent = d.digit;
+          document.getElementById('recognized-text').textContent = `Digit ${d.digit}`;
+          document.getElementById('cam-status').textContent = `Detected: ${d.digit}`;
+          if (d.translated_word) {
+            document.getElementById('translated-word').textContent = d.translated_word;
+            document.getElementById('translation-result').style.display = 'block';
+          }
+          signHistory.unshift(d.digit);
+          if (signHistory.length > MAX_HISTORY) signHistory.pop();
+          document.getElementById('sign-history').textContent = signHistory.join(' · ') || '—';
+        } else {
+          document.getElementById('recognized-digit').textContent = '—';
+          document.getElementById('recognized-text').textContent = 'No hand detected';
+          document.getElementById('cam-status').textContent = 'Recognizing…';
+          document.getElementById('translation-result').style.display = 'none';
+        }
+      } catch {
+        document.getElementById('cam-status').textContent = 'Error – check backend';
+      }
+    }
+
+    /* ── Voice Input (Speech Recognition) ── */
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isListening = false;
+
+    function toggleVoiceInput() {
+      if (!SpeechRecognition) {
+        alert('Sorry, your browser does not support voice input. Try Chrome or Edge.');
+        return;
+      }
+      isListening ? stopVoiceInput() : startVoiceInput();
+    }
+
+    function startVoiceInput() {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = true;       /* keep mic open until user stops it */
+      recognition.interimResults = true;   /* stream text live as user speaks */
+      recognition.maxAlternatives = 1;
+
+      const micBtn = document.getElementById('mic-btn');
+      const micLabel = document.getElementById('mic-label');
+      const inputEl = document.getElementById('text-input');
+      const charCount = document.getElementById('char-count');
+
+      let finalText = '';  /* accumulates confirmed words */
+
+      recognition.onstart = () => {
+        isListening = true;
+        micBtn.style.background = 'linear-gradient(90deg,#ef4444,#f97316)';
+        micLabel.textContent = 'Listening… (tap to stop)';
+        micBtn.style.animation = 'pulse 1.5s infinite';
+      };
+
+      recognition.onresult = (e) => {
+        let interim = '';
+        /* Walk all result segments */
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const seg = e.results[i][0].transcript;
+          if (e.results[i].isFinal) {
+            finalText += seg.replace(/\.+$/g, '').trim() + ' ';
+          } else {
+            interim += seg;
+          }
+        }
+        /* Show final + interim together in the textarea */
+        const display = (finalText + interim).replace(/\.+$/g, '').trim();
+        inputEl.value = display;
+        charCount.textContent = display.length;
+        /* Do NOT auto-translate — user must click Translate to ISL */
+      };
+
+      recognition.onerror = (e) => {
+        if (e.error !== 'no-speech') {
+          console.warn('Speech recognition error:', e.error);
+          stopVoiceInput();
+        }
+        /* ignore 'no-speech' so mic stays open during pauses */
+      };
+
+      recognition.onend = () => {
+        /* In continuous mode, onend can fire on brief pauses;
+           only stop if we deliberately set isListening=false first */
+        if (isListening) {
+          try { recognition.start(); } catch { stopVoiceInput(); }
+        }
+      };
+
+      recognition.start();
+    }
+
+    function stopVoiceInput() {
+      if (!isListening) return;          /* prevent re-entry from onend */
+      isListening = false;
+      const rec = recognition;
+      recognition = null;
+      if (rec) { try { rec.stop(); } catch { } }
+      const micBtn = document.getElementById('mic-btn');
+      const micLabel = document.getElementById('mic-label');
+      if (micBtn) micBtn.style.background = 'linear-gradient(90deg,#6366f1,#8b5cf6)';
+      if (micLabel) micLabel.textContent = 'Speak a Word';
+      if (micBtn) micBtn.style.animation = 'none';
+    }
+
+    /* ── Voice Output (Text-to-Speech) ── */
+    function speakRecognizedText() {
+      const digit = document.getElementById('recognized-digit').textContent.trim();
+      const text = document.getElementById('recognized-text').textContent.trim();
+
+      /* Nothing meaningful to say */
+      if (digit === '—' && (!text || text === 'Position hands in frame' || text === 'No hand detected')) {
+        return;
+      }
+
+      /* Build speech text */
+      let speech = '';
+      if (digit !== '—') speech = `Digit ${digit}`;
+      if (text && text !== `Digit ${digit}` && text !== 'Position hands in frame') {
+        speech += speech ? `, ${text}` : text;
+      }
+      if (!speech) return;
+
+      /* Cancel any ongoing speech */
+      window.speechSynthesis.cancel();
+
+      const utter = new SpeechSynthesisUtterance(speech);
+      utter.lang = 'en-US';
+      utter.rate = 0.9;
+      utter.pitch = 1;
+
+      /* Animate button while speaking */
+      const btn = document.getElementById('speak-btn');
+      btn.style.background = 'linear-gradient(90deg,#22c55e,#16a34a)';
+      utter.onend = () => { btn.style.background = 'linear-gradient(90deg,#6366f1,#8b5cf6)'; };
+      utter.onerror = () => { btn.style.background = 'linear-gradient(90deg,#6366f1,#8b5cf6)'; };
+
+      window.speechSynthesis.speak(utter);
+    }
+
+    /* ── Health check ── */
+    fetch(`${API}/api/health`).then(r => r.json())
+      .then(d => console.log('✅ Backend ready:', d))
+      .catch(() => console.warn('⚠️ Backend offline. Run: python app.py'));
+  </script>
+</body>
+
+</html>
